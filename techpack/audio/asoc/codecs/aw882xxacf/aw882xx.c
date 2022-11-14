@@ -1142,7 +1142,7 @@ static int aw882xx_set_rx_en(struct snd_kcontrol *kcontrol,
 {
 	int ret = -EINVAL;
 	uint32_t ctrl_value = 0;
-	struct aw_device *aw_dev = NULL;
+//	struct aw_device *aw_dev = NULL;
 	aw_snd_soc_codec_t *codec =
 		aw_componet_codec_ops.kcontrol_codec(kcontrol);
 	struct aw882xx *aw882xx =
@@ -1151,7 +1151,7 @@ static int aw882xx_set_rx_en(struct snd_kcontrol *kcontrol,
 	aw_dev_dbg(aw882xx->dev, "ucontrol->value.integer.value[0]=%ld",
 				ucontrol->value.integer.value[0]);
 
-	aw_dev = aw882xx->aw_pa;
+//	aw_dev = aw882xx->aw_pa;
 	ctrl_value = ucontrol->value.integer.value[0];
 
 	ret = aw_dev_set_afe_module_en(AW_RX_MODULE, ctrl_value);
