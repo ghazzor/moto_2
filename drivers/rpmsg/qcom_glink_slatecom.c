@@ -1706,7 +1706,7 @@ static int glink_slatecom_rx_data(struct glink_slatecom *glink,
 					chunk_size);
 		glink_slatecom_free_intent(channel, intent);
 		mutex_unlock(&channel->intent_lock);
-		return msglen;
+		return -EBADMSG;
 	}
 
 	rc = slatecom_ahb_read(glink->slatecom_handle, (uint32_t)(size_t)addr,
@@ -1935,7 +1935,7 @@ static void glink_slatecom_process_cmd(struct glink_slatecom *glink, void *rx_da
 		case SLATECOM_CMD_CLOSE_ACK:
 			glink_slatecom_rx_defer(glink,
 					   rx_data + offset - sizeof(*msg),
-					   rx_size + offset - sizeof(*msg), 0);
+					   rx_size - offset + sizeof(*msg), 0);
 			break;
 		case SLATECOM_CMD_RX_INTENT_REQ:
 			glink_slatecom_handle_intent_req(glink, param1, param2);
@@ -1948,7 +1948,7 @@ static void glink_slatecom_process_cmd(struct glink_slatecom *glink, void *rx_da
 			name = rx_data + offset;
 			glink_slatecom_rx_defer(glink,
 					   rx_data + offset - sizeof(*msg),
-					   rx_size + offset - sizeof(*msg),
+					   rx_size - offset + sizeof(*msg),
 					   ALIGN(name_len, SLATECOM_ALIGNMENT));
 
 			offset += ALIGN(name_len, SLATECOM_ALIGNMENT);
