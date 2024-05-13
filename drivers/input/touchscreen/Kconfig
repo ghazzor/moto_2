@@ -1331,6 +1331,10 @@ config TOUCHSCREEN_SYNAPTICS_DSX
 
 source "drivers/input/touchscreen/synaptics_dsx/Kconfig"
 
+source "drivers/input/touchscreen/chipone_tddi_v2_mmi/Kconfig"
+
+source "drivers/input/touchscreen/ilitek_v3_mmi/Kconfig"
+
 source "drivers/input/touchscreen/nt36xxx/Kconfig"
 
 endif

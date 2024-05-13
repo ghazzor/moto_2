@@ -1,0 +1,11 @@
+#
+# Focaltech Touchscreen driver configuration
+#
+
+config TOUCHSCREEN_ILITEK_CHIPSET
+	tristate "Moto ILITEK Touchscreen"
+	depends on I2C
+	default n
+	help
+	  Say Y here if you have Moto ILITEK touch panel.
+	  If unsure, say N.
