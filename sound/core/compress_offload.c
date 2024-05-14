@@ -716,7 +716,6 @@ EXPORT_SYMBOL(snd_compr_use_pause_in_draining);
 static int snd_compr_pause(struct snd_compr_stream *stream)
 {
 	int retval;
-	struct snd_compr_file *scf = container_of(stream, struct snd_compr_file, stream);
 
 	if (stream->runtime->state != SNDRV_PCM_STATE_RUNNING)
 		return -EPERM;
@@ -729,7 +728,6 @@ static int snd_compr_pause(struct snd_compr_stream *stream)
 static int snd_compr_resume(struct snd_compr_stream *stream)
 {
 	int retval;
-	struct snd_compr_file *scf = container_of(stream, struct snd_compr_file, stream);
 
 	if (stream->runtime->state != SNDRV_PCM_STATE_PAUSED)
 		return -EPERM;
@@ -763,7 +761,6 @@ static int snd_compr_start(struct snd_compr_stream *stream)
 static int snd_compr_stop(struct snd_compr_stream *stream)
 {
 	int retval;
-	struct snd_compr_file *scf = container_of(stream, struct snd_compr_file, stream);
 
 	switch (stream->runtime->state) {
 	case SNDRV_PCM_STATE_OPEN:
