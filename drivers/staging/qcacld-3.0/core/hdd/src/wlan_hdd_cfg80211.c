@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -269,7 +269,7 @@ static const struct ieee80211_channel hdd_channels_2_4_ghz[] = {
 	HDD2GHZCHAN(2462, 11, 0),
 	HDD2GHZCHAN(2467, 12, 0),
 	HDD2GHZCHAN(2472, 13, 0),
-	HDD2GHZCHAN(2484, 14, 0),
+
 };
 
 static const struct ieee80211_channel hdd_channels_5_ghz[] = {
@@ -1944,7 +1944,7 @@ static int wlan_hdd_set_acs_ch_range(
 		sap_cfg->acs_cfg.start_ch_freq =
 				wlan_reg_ch_to_freq(CHAN_ENUM_2412);
 		sap_cfg->acs_cfg.end_ch_freq =
-				wlan_reg_ch_to_freq(CHAN_ENUM_2484);
+				wlan_reg_ch_to_freq(CHAN_ENUM_2472);
 	} else if (hw_mode == QCA_ACS_MODE_IEEE80211G) {
 		sap_cfg->acs_cfg.hw_mode = eCSR_DOT11_MODE_11g;
 		sap_cfg->acs_cfg.start_ch_freq =
@@ -4603,13 +4603,12 @@ hdd_send_roam_scan_channel_freq_list_to_sme(struct hdd_context *hdd_ctx,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	nla_for_each_nested(curr_attr, tb2[PARAM_SCAN_FREQ_LIST], rem) {
-		if (num_chan >= SIR_MAX_SUPPORTED_CHANNEL_LIST) {
-			hdd_err("number of channels (%d) supported exceeded max (%d)",
-				num_chan, SIR_MAX_SUPPORTED_CHANNEL_LIST);
-			return QDF_STATUS_E_INVAL;
-		}
+	nla_for_each_nested(curr_attr, tb2[PARAM_SCAN_FREQ_LIST], rem)
 		num_chan++;
+	if (num_chan > SIR_MAX_SUPPORTED_CHANNEL_LIST) {
+		hdd_err("number of channels (%d) supported exceeded max (%d)",
+			num_chan, SIR_MAX_SUPPORTED_CHANNEL_LIST);
+		return QDF_STATUS_E_INVAL;
 	}
 	num_chan = 0;
 
@@ -4656,7 +4655,6 @@ roam_control_policy[QCA_ATTR_ROAM_CONTROL_MAX + 1] = {
 			.type = NLA_U8},
 	[QCA_ATTR_ROAM_CONTROL_FULL_SCAN_6GHZ_ONLY_ON_PRIOR_DISCOVERY] = {
 			.type = NLA_U8},
-	[QCA_ATTR_ROAM_CONTROL_CONNECTED_HIGH_RSSI_OFFSET] = {.type = NLA_U8},
 };
 
 /**
@@ -5306,31 +5304,6 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 							     vdev_id, value);
 		if (QDF_IS_STATUS_ERROR(status))
 			hdd_err("Fail to decide inclusion of 6 GHz channels");
-	}
-
-	attr = tb2[QCA_ATTR_ROAM_CONTROL_CONNECTED_HIGH_RSSI_OFFSET];
-	if (attr) {
-		value = nla_get_u8(attr);
-		if (!cfg_in_range(CFG_LFR_ROAM_SCAN_HI_RSSI_DELTA, value)) {
-			hdd_err("High RSSI offset value %d is out of range",
-				value);
-			return -EINVAL;
-		}
-
-		hdd_debug("%s roam scan high RSSI with offset: %d for vdev %d",
-			  value ? "Enable" : "Disable", value, vdev_id);
-
-		if (!value &&
-		    !wlan_cm_get_roam_scan_high_rssi_offset(hdd_ctx->psoc)) {
-			hdd_debug("Roam scan high RSSI is already disabled");
-			return -EINVAL;
-		}
-
-		status = ucfg_cm_set_roam_scan_high_rssi_offset(hdd_ctx->psoc,
-								vdev_id, value);
-		if (QDF_IS_STATUS_ERROR(status))
-			hdd_err("Fail to set roam scan high RSSI offset for vdev %d",
-				vdev_id);
 	}
 
 	return qdf_status_to_os_return(status);
@@ -7269,7 +7242,6 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_TX_NSS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS] = {.type = NLA_U8 },
-	[QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_WFC_STATE] = {
 		.type = NLA_U8 },
 };
@@ -9052,103 +9024,6 @@ static int hdd_set_nss(struct hdd_adapter *adapter,
 	return ret;
 }
 
-#ifdef FEATURE_WLAN_DYNAMIC_ARP_NS_OFFLOAD
-#define DYNAMIC_ARP_NS_ENABLE    1
-#define DYNAMIC_ARP_NS_DISABLE   0
-
-/**
- * hdd_set_arp_ns_offload() - enable/disable arp/ns offload feature
- * @adapter: hdd adapter
- * @attr: pointer to nla attr
- *
- * Return: 0 on success, negative errno on failure
- */
-static int hdd_set_arp_ns_offload(struct hdd_adapter *adapter,
-				  const struct nlattr *attr)
-{
-	uint8_t offload_state;
-	int errno;
-	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	struct wlan_objmgr_vdev *vdev;
-
-	errno = wlan_hdd_validate_context(hdd_ctx);
-	if (errno)
-		return errno;
-
-	if (!ucfg_pmo_is_arp_offload_enabled(hdd_ctx->psoc) ||
-	    !ucfg_pmo_is_ns_offloaded(hdd_ctx->psoc)) {
-		hdd_err_rl("ARP/NS Offload is disabled by ini");
-		return -EINVAL;
-	}
-
-	if (!ucfg_pmo_is_active_mode_offloaded(hdd_ctx->psoc)) {
-		hdd_err_rl("active mode offload is disabled by ini");
-		return -EINVAL;
-	}
-
-	if (adapter->device_mode != QDF_STA_MODE &&
-	    adapter->device_mode != QDF_P2P_CLIENT_MODE) {
-		hdd_err_rl("only support on sta/p2p-cli mode");
-		return -EINVAL;
-	}
-
-	vdev = hdd_objmgr_get_vdev(adapter);
-	if (!vdev) {
-		hdd_err("vdev is NULL");
-		return -EINVAL;
-	}
-
-	offload_state = nla_get_u8(attr);
-
-	if (offload_state == DYNAMIC_ARP_NS_ENABLE)
-		qdf_status = ucfg_pmo_dynamic_arp_ns_offload_enable(vdev);
-	else if (offload_state == DYNAMIC_ARP_NS_DISABLE)
-		qdf_status = ucfg_pmo_dynamic_arp_ns_offload_disable(vdev);
-
-	if (QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		if (offload_state == DYNAMIC_ARP_NS_ENABLE)
-			ucfg_pmo_dynamic_arp_ns_offload_runtime_allow(vdev);
-		else
-			ucfg_pmo_dynamic_arp_ns_offload_runtime_prevent(vdev);
-	}
-
-	hdd_objmgr_put_vdev(vdev);
-
-	if (QDF_IS_STATUS_ERROR(qdf_status)) {
-		if (qdf_status == QDF_STATUS_E_ALREADY) {
-			hdd_info_rl("already set arp/ns offload %d",
-				    offload_state);
-			return 0;
-		}
-		return qdf_status_to_os_return(qdf_status);
-	}
-
-	if (!hdd_is_vdev_in_conn_state(adapter)) {
-		hdd_info("set not in connect state, updated state %d",
-			 offload_state);
-		return 0;
-	}
-
-	if (offload_state == DYNAMIC_ARP_NS_ENABLE) {
-		hdd_enable_arp_offload(adapter,
-				       pmo_arp_ns_offload_dynamic_update);
-		hdd_enable_ns_offload(adapter,
-				      pmo_arp_ns_offload_dynamic_update);
-	} else if (offload_state == DYNAMIC_ARP_NS_DISABLE) {
-		hdd_disable_arp_offload(adapter,
-					pmo_arp_ns_offload_dynamic_update);
-		hdd_disable_ns_offload(adapter,
-				       pmo_arp_ns_offload_dynamic_update);
-	}
-
-	return 0;
-}
-
-#undef DYNAMIC_ARP_NS_ENABLE
-#undef DYNAMIC_ARP_NS_DISABLE
-#endif
-
 /**
  * hdd_set_wfc_state() - Set wfc state
  * @adapter: hdd adapter
@@ -9293,10 +9168,6 @@ static const struct independent_setters independent_setters[] = {
 	 hdd_config_udp_qos_upgrade_threshold},
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS,
 	 hdd_set_ft_over_ds},
-#ifdef FEATURE_WLAN_DYNAMIC_ARP_NS_OFFLOAD
-	{QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD,
-	 hdd_set_arp_ns_offload},
-#endif
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_WFC_STATE,
 	 hdd_set_wfc_state},
 };
@@ -18366,9 +18237,6 @@ static int __wlan_hdd_cfg80211_change_iface(struct wiphy *wiphy,
 	policy_mgr_clear_concurrency_mode(hdd_ctx->psoc, adapter->device_mode);
 
 	if (hdd_is_client_mode(adapter->device_mode)) {
-		if (adapter->device_mode == QDF_STA_MODE)
-			hdd_cleanup_conn_info(adapter);
-
 		if (hdd_is_client_mode(new_mode)) {
 			errno = hdd_change_adapter_mode(adapter, new_mode);
 			if (errno) {
@@ -18881,6 +18749,9 @@ static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 	cipher = osif_nl_to_crypto_cipher_type(params->cipher);
 	if (pairwise)
 		wma_set_peer_ucast_cipher(mac_address.bytes, cipher);
+
+	cdp_peer_flush_frags(cds_get_context(QDF_MODULE_ID_SOC),
+			     wlan_vdev_get_id(vdev), mac_address.bytes);
 
 	cdp_peer_flush_frags(cds_get_context(QDF_MODULE_ID_SOC),
 			     wlan_vdev_get_id(vdev), mac_address.bytes);

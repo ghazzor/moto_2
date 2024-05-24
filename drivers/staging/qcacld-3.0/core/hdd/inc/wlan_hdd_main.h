@@ -1766,7 +1766,7 @@ enum RX_OFFLOAD {
 /**
  * struct hdd_cache_channel_info - Structure of the channel info
  * which needs to be cached
- * @freq: frequency
+ * @channel_num: channel number
  * @reg_status: Current regulatory status of the channel
  * Enable
  * Disable
@@ -1775,7 +1775,7 @@ enum RX_OFFLOAD {
  * @wiphy_status: Current wiphy status
  */
 struct hdd_cache_channel_info {
-	qdf_freq_t freq;
+	uint32_t channel_num;
 	enum channel_state reg_status;
 	uint32_t wiphy_status;
 };
@@ -1964,6 +1964,7 @@ struct hdd_context {
 	/** P2P Device MAC Address for the adapter  */
 	struct qdf_mac_addr p2p_device_address;
 
+	qdf_wake_lock_t rx_wake_lock;
 	qdf_wake_lock_t sap_wake_lock;
 
 	/* Flag keeps track of wiphy suspend/resume */

@@ -572,23 +572,11 @@ void hdd_enable_ns_offload(struct hdd_adapter *adapter,
 	ns_req->trigger = trigger;
 	ns_req->count = 0;
 
-	vdev = hdd_objmgr_get_vdev(adapter);
-	if (!vdev) {
-		hdd_err("vdev is NULL");
-		goto free_req;
-	}
-
 	/* check if offload cache and send is required or not */
 	status = ucfg_pmo_ns_offload_check(psoc, trigger, adapter->vdev_id);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_debug("NS offload is not required");
-		goto put_vdev;
-	}
-
-	if (ucfg_pmo_get_arp_ns_offload_dynamic_disable(vdev)) {
-		hdd_debug("Dynamic arp ns offload disabled");
-		ucfg_pmo_flush_ns_offload_req(vdev);
-		goto skip_cache_ns;
+		goto free_req;
 	}
 
 	/* Unicast Addresses */
@@ -598,7 +586,7 @@ void hdd_enable_ns_offload(struct hdd_adapter *adapter,
 	if (errno) {
 		hdd_disable_ns_offload(adapter, trigger);
 		hdd_debug("Max supported addresses: disabling NS offload");
-		goto put_vdev;
+		goto free_req;
 	}
 
 	/* Anycast Addresses */
@@ -608,17 +596,21 @@ void hdd_enable_ns_offload(struct hdd_adapter *adapter,
 	if (errno) {
 		hdd_disable_ns_offload(adapter, trigger);
 		hdd_debug("Max supported addresses: disabling NS offload");
-		goto put_vdev;
+		goto free_req;
 	}
 
 	/* cache ns request */
 	status = ucfg_pmo_cache_ns_offload_req(ns_req);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_debug("Failed to cache ns request; status:%d", status);
-		goto put_vdev;
+		goto free_req;
 	}
 
-skip_cache_ns:
+	vdev = hdd_objmgr_get_vdev(adapter);
+	if (!vdev) {
+		hdd_err("vdev is NULL");
+		goto free_req;
+	}
 	/* enable ns request */
 	status = ucfg_pmo_enable_ns_offload_in_fwr(vdev, trigger);
 	if (QDF_IS_STATUS_ERROR(status)) {
@@ -1292,12 +1284,6 @@ void hdd_enable_arp_offload(struct hdd_adapter *adapter,
 		goto put_vdev;
 	}
 
-	if (ucfg_pmo_get_arp_ns_offload_dynamic_disable(vdev)) {
-		hdd_debug("Dynamic arp ns offload disabled");
-		ucfg_pmo_flush_arp_offload_req(vdev);
-		goto skip_cache_arp;
-	}
-
 	ifa = hdd_get_ipv4_local_interface(adapter);
 	if (!ifa || !ifa->ifa_local) {
 		hdd_info("IP Address is not assigned");
@@ -1313,7 +1299,6 @@ void hdd_enable_arp_offload(struct hdd_adapter *adapter,
 		goto put_vdev;
 	}
 
-skip_cache_arp:
 	status = ucfg_pmo_enable_arp_offload_in_fwr(vdev, trigger);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("failed arp offload config in fw; status:%d", status);
@@ -2636,8 +2621,7 @@ static int __wlan_hdd_cfg80211_set_power_mgmt(struct wiphy *wiphy,
 	if (hdd_adapter_is_connected_sta(adapter)) {
 		hdd_debug("vdev mode %d enable dhcp protection",
 			  adapter->device_mode);
-		allow_power_save ? hdd_stop_dhcp_ind(adapter) :
-			hdd_start_dhcp_ind(adapter);
+                allow_power_save ? hdd_stop_dhcp_ind(adapter) : hdd_start_dhcp_ind(adapter);
 	} else {
 		hdd_debug("vdev mod %d disconnected ignore dhcp protection",
 			  adapter->device_mode);
