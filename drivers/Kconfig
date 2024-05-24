@@ -242,4 +242,6 @@ source "drivers/sensors/Kconfig"
 
 source "drivers/watchdogtest/Kconfig"
 
+source "drivers/moto_swap/Kconfig"
+
 endmenu
