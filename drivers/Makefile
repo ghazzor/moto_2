@@ -193,3 +193,8 @@ obj-$(CONFIG_MMI_RELAY) 	+= mmi_relay/
 obj-$(CONFIG_MOTO_F_USBNET)	+= moto_f_usbnet/
 obj-$(CONFIG_SENSORS_CLASS)	+= sensors/
 obj-$(CONFIG_WATCHDOGTEST)	+= watchdogtest/
+
+obj-m				+= moto_swap/
+obj-m				+= fm/
+obj-m				+= moto_mm/
+obj-m				+= backlight/aw99703/
