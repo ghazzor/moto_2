@@ -1,17 +1,11 @@
 # We can build either as part of a standalone Kernel build or as
 # an external module.  Determine which mechanism is being used
-ifeq ($(MODNAME),)
-	KERNEL_BUILD := 1
-else
-	KERNEL_BUILD := 0
-endif
+KERNEL_BUILD := 1
+# These are configurable via Kconfig for kernel-based builds
+# Need to explicitly configure for Android-based builds
+AUDIO_BLD_DIR := $(srctree)
+AUDIO_ROOT := $(AUDIO_BLD_DIR)/techpack/audio
 
-ifeq ($(KERNEL_BUILD), 1)
-	# These are configurable via Kconfig for kernel-based builds
-	# Need to explicitly configure for Android-based builds
-	AUDIO_BLD_DIR := $(shell pwd)/kernel/msm-5.4
-	AUDIO_ROOT := $(AUDIO_BLD_DIR)/techpack/audio
-endif
 
 ifeq ($(CONFIG_SND_SOC_AUTO), y)
 	ifdef CONFIG_SND_SOC_SA8155
