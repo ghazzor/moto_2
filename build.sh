@@ -19,6 +19,7 @@ make distclean
 elif [ "$1" = "-d" ]; then
 echo "Dirty Build"
 elif [ "$1" = "-g" ]; then
+rm -rf out
 echo "Generating configs only"
 else
 echo "Error: Set $1 to -c or -d"
