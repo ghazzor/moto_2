@@ -44,9 +44,13 @@ LLVM=1
 '
 
 make ${ARGS} O=out ${DEVICE}_defconfig moto.config
-
 if [ "$1" != "-g" ]; then
+
 make ${ARGS} O=out -j$(nproc)
+[ ! -e "out/arch/arm64/boot/Image" ] && \
+echo "  ERROR : image binary not found in any of the specified locations , fix compile!" && \
+exit 1
+
 rm -rf AnyKernel3
 cp -r akv3 AnyKernel3
 cp out/arch/arm64/boot/Image AnyKernel3/Image
