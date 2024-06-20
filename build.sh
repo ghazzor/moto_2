@@ -18,6 +18,8 @@ rm -rf out
 make distclean
 elif [ "$1" = "-d" ]; then
 echo "Dirty Build"
+elif [ "$1" = "-g" ]; then
+echo "Generating configs only"
 else
 echo "Error: Set $1 to -c or -d"
 exit 1
@@ -42,8 +44,9 @@ LLVM=1
 '
 
 make ${ARGS} O=out ${DEVICE}_defconfig moto.config
-make ${ARGS} O=out -j$(nproc)
 
+if [ "$1" != "-g" ]; then
+make ${ARGS} O=out -j$(nproc)
 rm -rf AnyKernel3
 cp -r akv3 AnyKernel3
 cp out/arch/arm64/boot/Image AnyKernel3/Image
@@ -53,3 +56,6 @@ kmod=$(echo ${kver} | awk -F'.' '{print $3}')
 cd AnyKernel3
 zip -r9 O_KERNEL.${kmod}_${DEVICE}-${TIME}.zip * -x .git README.md *placeholder
 cd ..
+else
+cp out/.config arch/arm64/configs/${DEVICE}_defconfig
+fi
