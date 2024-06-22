@@ -9,7 +9,7 @@ export LLVM=1
 export ARCH=arm64
 
 if [ -z "$DEVICE" ]; then
-export DEVICE=g84
+export DEVICE=g34
 fi
 
 if [[ -z "$1" || "$1" = "-c" ]]; then
