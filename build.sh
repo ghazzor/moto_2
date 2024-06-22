@@ -15,7 +15,6 @@ fi
 if [[ -z "$1" || "$1" = "-c" ]]; then
 echo "Clean Build"
 rm -rf out
-make distclean
 elif [ "$1" = "-d" ]; then
 echo "Dirty Build"
 elif [ "$1" = "-g" ]; then
