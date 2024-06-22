@@ -174,8 +174,8 @@ static bool migrate_one_irq(struct irq_desc *desc)
 	 * CPU.
 	 */
 	err = irq_set_affinity_locked(d, affinity, false);
-#ifdef CONFIG_DEBUG_KERNEL
 	if (err) {
+#ifdef CONFIG_DEBUG_KERNEL
 		pr_warn_ratelimited("IRQ%u: set affinity failed(%d).\n",
 				    d->irq, err);
 #endif
