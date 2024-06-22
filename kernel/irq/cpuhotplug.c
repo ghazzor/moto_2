@@ -174,9 +174,11 @@ static bool migrate_one_irq(struct irq_desc *desc)
 	 * CPU.
 	 */
 	err = irq_set_affinity_locked(d, affinity, false);
+#ifdef CONFIG_DEBUG_KERNEL
 	if (err) {
 		pr_warn_ratelimited("IRQ%u: set affinity failed(%d).\n",
 				    d->irq, err);
+#endif
 		brokeaff = false;
 	}
 
@@ -209,10 +211,12 @@ void irq_migrate_all_off_this_cpu(void)
 		affinity_broken = migrate_one_irq(desc);
 		raw_spin_unlock(&desc->lock);
 
+#ifdef CONFIG_DEBUG_KERNEL
 		if (affinity_broken) {
 			pr_info_ratelimited("IRQ %u: no longer affine to CPU%u\n",
 					    irq, smp_processor_id());
 		}
+#endif
 	}
 }
 
