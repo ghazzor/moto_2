@@ -26,14 +26,20 @@ EXTRA_CFLAGS += -DCONFIG_HYBRIDSWAP_CORE
 endif
 
 moto_swap-objs += $(ZRAM_SRC)/zram_drv.o
+
+ifneq ($(filter m y,$(CONFIG_HYBRIDSWAP)),)
 moto_swap-objs += hybridswap/hybridswap_main.o
 moto_swap-objs += hybridswap/hybridswap_eswap.o
+endif
 
 ifneq ($(filter m y,$(CONFIG_HYBRIDSWAP_ASYNC_COMPRESS)),)
 moto_swap-objs += hybridswap/hybridswap_akcompress.o
 endif
 
+ifneq ($(filter m y,$(CONFIG_HYBRIDSWAP)),)
 moto_swap-objs += hybridswap/hybridswap_swapd.o
+endif
+
 moto_swap-objs += $(ZRAM_SRC)/zcomp.o
 
 obj-m += moto_swap.o
